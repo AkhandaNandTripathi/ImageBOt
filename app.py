@@ -16,6 +16,7 @@ openai.api_key = AZURE_API_KEY
 
 @app.route('/')
 def home():
+    # Display @DhanRakShak on the deployed HTML page
     return render_template_string('<html><body><h1>@DhanRakShak</h1></body></html>')
 
 @app.route('/generate_image', methods=['POST'])
@@ -109,6 +110,20 @@ def send_message_to_telegram(chat_id, text):
         requests.post(TELEGRAM_API_URL + 'sendMessage', data={'chat_id': chat_id, 'text': text})
     except requests.RequestException as e:
         print(f"Failed to send message to Telegram: {e}")
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.json
+    if 'message' in data:
+        chat_id = data['message']['chat']['id']
+        text = data['message'].get('text', '')
+
+        if text == '/start':
+            send_message_to_telegram(chat_id, 'Bot is working. Dev @DhanRakShak')
+        else:
+            send_message_to_telegram(chat_id, "Unknown command or error.")
+        
+    return jsonify({'status': 'success'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
