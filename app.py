@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 import openai
 import requests
 from io import BytesIO
@@ -14,13 +14,17 @@ API_VERSION = os.getenv('API_VERSION')
 
 openai.api_key = AZURE_API_KEY
 
+@app.route('/')
+def home():
+    return render_template_string('<html><body><h1>@DhanRakShak</h1></body></html>')
+
 @app.route('/generate_image', methods=['POST'])
 def generate_image():
     data = request.json
     prompt = data.get('query', '')
     chat_id = data.get('chat_id')
 
-    if prompt == '/status':
+    if prompt == '/start':
         send_message_to_telegram(chat_id, 'Bot is working. Dev @DhanRakShak')
         return jsonify({'status': 'success'})
 
@@ -41,6 +45,7 @@ def generate_image():
 
         return jsonify({'status': 'success'})
     except Exception as e:
+        send_message_to_telegram(chat_id, f"Error occurred: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/ask', methods=['POST'])
