@@ -11,11 +11,9 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/"
 
-# Headers for the request
-headers = {
-    "Content-Type": "application/json",
-    "api-key": API_KEY,
-}
+# Ensure environment variables are loaded
+if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+    raise ValueError("Telegram bot token and chat ID must be set as environment variables.")
 
 @app.route('/')
 def index():
@@ -24,24 +22,29 @@ def index():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
-    chat_id = data['message']['chat']['id']
-    text = data['message']['text']
+    if 'message' in data and 'chat' in data['message']:
+        chat_id = data['message']['chat']['id']
+        text = data['message']['text']
 
-    if text == '/start':
-        send_message(chat_id, 'Bot is working')
+        if text == '/start':
+            send_message(chat_id, 'Bot is working')
+        else:
+            send_message(chat_id, 'Unsupported command')
+    else:
+        return jsonify({"error": "Invalid webhook data"}), 400
     
     return jsonify(status="ok")
 
 @app.route('/ask', methods=['GET'])
 def ask():
     query = request.args.get('query')
+    if not query:
+        return jsonify({"error": "No query parameter provided"}), 400
+
     user_ip = request.remote_addr
     telegram_username = request.args.get('username', 'unknown')
     telegram_name = request.args.get('name', 'unknown')
     telegram_user_id = request.args.get('user_id', 'unknown')
-
-    if not query:
-        return jsonify({"error": "No query parameter provided"}), 400
 
     # Log user details to Telegram chat
     log_message = (
