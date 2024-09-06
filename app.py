@@ -2,14 +2,15 @@ from flask import Flask, request, jsonify
 import openai
 import requests
 from io import BytesIO
+import os
 
 app = Flask(__name__)
 
-# Configuration
-TELEGRAM_API_URL = 'https://api.telegram.org/bot7282854458:AAEgIt3OigoszFAFGnrYcnvJbIlRbDN9E4I/'
-AZURE_API_KEY = "dc0b54078720445e94cb7eaaa33bb9e7"
-AZURE_ENDPOINT = "https://avyukt.openai.azure.com/"
-API_VERSION = "2024-05-01-preview"
+# Configuration from environment variables
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/"
+AZURE_API_KEY = os.getenv('AZURE_API_KEY')
+AZURE_ENDPOINT = os.getenv('AZURE_ENDPOINT')
+API_VERSION = os.getenv('API_VERSION')
 
 openai.api_key = AZURE_API_KEY
 
@@ -23,24 +24,24 @@ def generate_image():
         send_message_to_telegram(chat_id, 'Bot is working. Dev @DhanRakShak')
         return jsonify({'status': 'success'})
 
-    # Generate image using DALL-E 3
-    result = openai.Image.create(
-        model="Dalle3",
-        prompt=prompt,
-        n=1,
-        api_version=API_VERSION,
-        azure_endpoint=AZURE_ENDPOINT,
-        api_key=AZURE_API_KEY
-    )
+    try:
+        # Generate image using DALL-E 3
+        result = openai.Image.create(
+            model="Dalle3",
+            prompt=prompt,
+            n=1
+        )
 
-    image_url = result['data'][0]['url']
-    img_response = requests.get(image_url)
-    img_bytes = BytesIO(img_response.content)
+        image_url = result['data'][0]['url']
+        img_response = requests.get(image_url)
+        img_bytes = BytesIO(img_response.content)
 
-    # Send the image to Telegram
-    send_image_to_telegram(chat_id, img_bytes)
+        # Send the image to Telegram
+        send_image_to_telegram(chat_id, img_bytes)
 
-    return jsonify({'status': 'success'})
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -80,7 +81,7 @@ def ask():
     }
 
     try:
-        response = requests.post(f"{AZURE_ENDPOINT}/openai/deployments/avyuktgpt/chat/completions?api-version=2024-02-15-preview", headers=headers, json=payload)
+        response = requests.post(f"{AZURE_ENDPOINT}/openai/deployments/avyuktgpt/chat/completions?api-version={API_VERSION}", headers=headers, json=payload)
         response.raise_for_status()
         answer = response.json().get('choices', [{}])[0].get('text', 'No answer')
     except requests.RequestException as e:
@@ -92,11 +93,17 @@ def ask():
     return jsonify({'status': 'success'})
 
 def send_image_to_telegram(chat_id, img_bytes):
-    files = {'photo': ('image.png', img_bytes, 'image/png')}
-    requests.post(TELEGRAM_API_URL + 'sendPhoto', data={'chat_id': chat_id}, files=files)
+    try:
+        files = {'photo': ('image.png', img_bytes, 'image/png')}
+        requests.post(TELEGRAM_API_URL + 'sendPhoto', data={'chat_id': chat_id}, files=files)
+    except requests.RequestException as e:
+        print(f"Failed to send image to Telegram: {e}")
 
 def send_message_to_telegram(chat_id, text):
-    requests.post(TELEGRAM_API_URL + 'sendMessage', data={'chat_id': chat_id, 'text': text})
+    try:
+        requests.post(TELEGRAM_API_URL + 'sendMessage', data={'chat_id': chat_id, 'text': text})
+    except requests.RequestException as e:
+        print(f"Failed to send message to Telegram: {e}")
 
 if __name__ == '__main__':
     app.run(debug=True)
