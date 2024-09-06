@@ -6,7 +6,7 @@ from io import BytesIO
 app = Flask(__name__)
 
 # Configuration
-TELEGRAM_API_URL = 'https://api.telegram.org/bot<YOUR_BOT_TOKEN>/'
+TELEGRAM_API_URL = 'https://api.telegram.org/bot7282854458:AAEgIt3OigoszFAFGnrYcnvJbIlRbDN9E4I/'
 AZURE_API_KEY = "dc0b54078720445e94cb7eaaa33bb9e7"
 AZURE_ENDPOINT = "https://avyukt.openai.azure.com/"
 API_VERSION = "2024-05-01-preview"
